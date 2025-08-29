@@ -92,7 +92,7 @@ class OnePropTRAINDataset(InMemoryDataset):
                  xd = None, y = None,
                  transform = None, pre_transform = None,
                  smile_graph = None, saliency_map = False):
-        super(MyDatasetOnePropTRAIN, self).__init__(root, transform, pre_transform)
+        super(OnePropTRAINDataset, self).__init__(root, transform, pre_transform)
         self.dataset = dataset
         self.saliency_map = saliency_map
 
