@@ -160,12 +160,12 @@ class OnePropTRAINDataset(InMemoryDataset):
         return self.xd
     
 
-class MyDatasetPREDICTION(InMemoryDataset):
+class PredictionDataset(InMemoryDataset):
     def __init__(self, root= '/tmp', dataset = 'Prediction',
                  xd = None,
                  transform = None, pre_transform = None,
                  smile_graph = None, saliency_map = False):
-        super(MyDatasetPREDICTION, self).__init__(root, transform, pre_transform)
+        super(PredictionDataset, self).__init__(root, transform, pre_transform)
         self.dataset = dataset
         self.saliency_map = saliency_map
 
