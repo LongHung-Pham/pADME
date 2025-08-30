@@ -206,14 +206,17 @@ class MultitaskTrainer:
         return self.model
 
     def cross_val(self, task_name, train_dataset, test_dataset, epochs = 50, lr = 1e-4):
+        # Set model to fine-tuning mode for the specific task
         self.model.set_fine_tuning_mode(task_name)
 
-        train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size = 32, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size = 16)
 
-        # Optimizer - only optimize the task-specific parameters
         optimizer = optim.AdamW(filter(lambda p: p.requires_grad, self.model.parameters()), lr=lr)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr = 1e-3, steps_per_epoch = len(train_loader), epochs = epochs)
+
+        best_loss = float('inf')
+        smallest_difference = float('inf')
 
         for epoch in range(epochs):
             self.model.train()
@@ -223,29 +226,23 @@ class MultitaskTrainer:
                 data = data.to(self.device)
                 optimizer.zero_grad()
 
-                output = self.model(data)                                           # Now returns only the task-specific output
-                loss = self.criterion(output.squeeze(), getattr(data, 'y'))         # task_name
+                output = self.model(data)  # Now returns only the task-specific output
+                loss = self.criterion(output.squeeze(), getattr(data, 'y'))      # task_name
 
                 train_loss += loss.item() * data.num_graphs
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
 
-            # Calculate average loss
             train_loss /= len(train_dataset)
 
         self.model.eval()
+        preds = torch.Tensor()
         test_loss = 0.0
         with torch.no_grad():
             for data in test_loader:
                 data = data.to(self.device)
                 output = self.model(data)
-                loss = self.criterion(output.squeeze(), getattr(data, 'y'))         # task_name
-                test_loss += loss.item() * data.num_graphs
-        test_loss /= len(test_dataset)
+                preds = torch.cat((preds, output.squeeze().cpu().flatten()), 0)      # output[task_name]
 
-        print(f'Epoch {epoch+1}/{epochs}:')
-        print(f'  Train Loss: {train_loss:.4f}')
-        print(f'  Fold MAE: {test_loss:.4f}')
-
-        return test_loss
+        return preds
